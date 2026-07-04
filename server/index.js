@@ -64,7 +64,7 @@ app.get('/test-email', async (req, res) => {
     try {
         console.log('Testing Brevo API email...');
         await sendStatusEmail(
-            process.env.EMAIL_USER,
+            'parampatel2725@gmail.com',
             'Test User',
             'Software Engineer',
             'HireFlow',
@@ -73,8 +73,12 @@ app.get('/test-email', async (req, res) => {
         console.log('Email sent successfully');
         res.json({ message: 'Email sent successfully' });
     } catch (error) {
-        console.log('Email error:', error.message);
-        res.json({ error: error.message });
+        console.log('Full error object:', JSON.stringify(error, null, 2));
+        res.json({
+            error: error.message,
+            status: error.status,
+            body: error.response?.body || error.response?.text
+        });
     }
 });
 
