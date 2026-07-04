@@ -8,6 +8,7 @@ import jobRoutes from './routes/jobRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import rateLimit from 'express-rate-limit';
+import { sendStatusEmail } from './config/mailer.js';
 
 // configuration
 dotenv.config();
@@ -50,7 +51,17 @@ const applyLimiter = rateLimit({
     message: { message: 'Too many applications, slow down' }
 });
 
-import { sendStatusEmail } from './config/mailer.js';
+app.use('api/auth/login', authLimiter);
+app.use('api/auth/register', authLimiter);
+app.use('api/applications', applyLimiter);
+
+app.use(express.json());
+app.use(cookieParser());
+
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/test-email', async (req, res) => {
     try {
@@ -66,18 +77,6 @@ app.get('/test-email', async (req, res) => {
         res.json({ error: error.message });
     }
 });
-
-app.use('api/auth/login', authLimiter);
-app.use('api/auth/register', authLimiter);
-app.use('api/applications', applyLimiter);
-
-app.use(express.json());
-app.use(cookieParser());
-
-app.use('/api/auth', authRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
     res.json({
