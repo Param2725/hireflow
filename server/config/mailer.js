@@ -4,10 +4,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,           // ← use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false  // ← fixes Railway SSL issues
+  }
+});
+
+// Verify connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('Mailer error:', error.message);
+  } else {
+    console.log('Mailer ready');
   }
 });
 
@@ -20,10 +34,10 @@ export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, ne
   };
 
   const message = statusMessages[newStatus];
-  if (!message) return; // Don't send email for 'Applied' status
+  if (!message) return;
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"HireFlow" <${process.env.EMAIL_USER}>`,
     to: toEmail,
     subject: `Application Update — ${jobTitle} at ${company}`,
     html: `
@@ -47,7 +61,7 @@ export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, ne
 
 export const sendOtpEmail = async (toEmail, otp) => {
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"HireFlow" <${process.env.EMAIL_USER}>`,
     to: toEmail,
     subject: 'HireFlow — Password Reset OTP',
     html: `
@@ -63,7 +77,6 @@ export const sendOtpEmail = async (toEmail, otp) => {
       </div>
     `
   };
+
   await transporter.sendMail(mailOptions);
 };
-
-// export default sendStatusEmail;

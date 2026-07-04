@@ -62,16 +62,18 @@ app.use('/api/dashboard', dashboardRoutes);
 // Test email route
 app.get('/test-email', async (req, res) => {
     try {
-        console.log('Test email route hit');
-        console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
-        console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
-
-        res.json({
-            message: 'Check Railway logs',
-            emailUser: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
-            emailPass: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
-        });
+        console.log('Attempting to send email...');
+        await sendStatusEmail(
+            process.env.EMAIL_USER,
+            'Test User',
+            'Software Engineer',
+            'HireFlow',
+            'Interview'
+        );
+        console.log('Email sent successfully');
+        res.json({ message: 'Email sent successfully' });
     } catch (error) {
+        console.log('Email error:', error.message);
         res.json({ error: error.message });
     }
 });
