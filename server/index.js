@@ -50,24 +50,17 @@ const applyLimiter = rateLimit({
     message: { message: 'Too many applications, slow down' }
 });
 
+import { sendStatusEmail } from './config/mailer.js';
+
 app.get('/test-email', async (req, res) => {
     try {
-        const nodemailer = await import('nodemailer');
-        const transporter = nodemailer.default.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
-
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_USER,
-            subject: 'HireFlow test email',
-            text: 'Email is working!'
-        });
-
+        await sendStatusEmail(
+            process.env.EMAIL_USER,
+            'Test User',
+            'Software Engineer',
+            'HireFlow',
+            'Interview'
+        );
         res.json({ message: 'Email sent successfully' });
     } catch (error) {
         res.json({ error: error.message });
