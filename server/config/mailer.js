@@ -13,6 +13,13 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+console.log('Mailer config:', {
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  user: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
+  pass: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
+});
+
 transporter.verify((error) => {
   if (error) {
     console.log('Mailer error:', error.message);
