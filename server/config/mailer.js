@@ -1,32 +1,12 @@
-import nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
 
-console.log('Mailer config:', {
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  user: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
-  pass: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
-});
-
-transporter.verify((error) => {
-  if (error) {
-    console.log('Mailer error:', error.message);
-  } else {
-    console.log('Mailer ready ✅');
-  }
-});
+console.log('Brevo API configured ✅');
 
 export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, newStatus) => {
   const statusMessages = {
@@ -39,47 +19,44 @@ export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, ne
   const message = statusMessages[newStatus];
   if (!message) return;
 
-  const mailOptions = {
-    from: `"HireFlow" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: `Application Update — ${jobTitle} at ${company}`,
-    html: `
-      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <h2 style="color: #091426;">HireFlow Application Update</h2>
-        <p style="color: #45474c;">Hi ${seekerName},</p>
-        <p style="color: #45474c;">${message}</p>
-        <div style="background: #f7f9fb; border-radius: 8px; padding: 16px; margin: 24px 0;">
-          <p style="margin: 0; color: #091426;"><strong>Position:</strong> ${jobTitle}</p>
-          <p style="margin: 8px 0 0; color: #091426;"><strong>Company:</strong> ${company}</p>
-          <p style="margin: 8px 0 0; color: #091426;"><strong>Status:</strong> ${newStatus}</p>
-        </div>
-        <p style="color: #45474c;">Good luck with your application!</p>
-        <p style="color: #75777d; font-size: 12px;">HireFlow — Your career journey starts here.</p>
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.subject = `Application Update — ${jobTitle} at ${company}`;
+  sendSmtpEmail.to = [{ email: toEmail, name: seekerName }];
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: 'HireFlow' };
+  sendSmtpEmail.htmlContent = `
+    <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h2 style="color: #091426;">HireFlow Application Update</h2>
+      <p style="color: #45474c;">Hi ${seekerName},</p>
+      <p style="color: #45474c;">${message}</p>
+      <div style="background: #f7f9fb; border-radius: 8px; padding: 16px; margin: 24px 0;">
+        <p style="margin: 0; color: #091426;"><strong>Position:</strong> ${jobTitle}</p>
+        <p style="margin: 8px 0 0; color: #091426;"><strong>Company:</strong> ${company}</p>
+        <p style="margin: 8px 0 0; color: #091426;"><strong>Status:</strong> ${newStatus}</p>
       </div>
-    `
-  };
+      <p style="color: #45474c;">Good luck with your application!</p>
+      <p style="color: #75777d; font-size: 12px;">HireFlow — Your career journey starts here.</p>
+    </div>
+  `;
 
-  await transporter.sendMail(mailOptions);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
 };
 
 export const sendOtpEmail = async (toEmail, otp) => {
-  const mailOptions = {
-    from: `"HireFlow" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: 'HireFlow — Password Reset OTP',
-    html: `
-      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <h2 style="color: #091426;">Password Reset Request</h2>
-        <p style="color: #45474c;">Your OTP for password reset is:</p>
-        <div style="background: #f7f9fb; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
-          <h1 style="color: #0058be; font-size: 48px; letter-spacing: 8px; margin: 0;">${otp}</h1>
-        </div>
-        <p style="color: #45474c;">This OTP expires in <strong>10 minutes</strong>.</p>
-        <p style="color: #45474c;">If you did not request this, ignore this email.</p>
-        <p style="color: #75777d; font-size: 12px;">HireFlow — Your career journey starts here.</p>
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.subject = 'HireFlow — Password Reset OTP';
+  sendSmtpEmail.to = [{ email: toEmail }];
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: 'HireFlow' };
+  sendSmtpEmail.htmlContent = `
+    <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h2 style="color: #091426;">Password Reset Request</h2>
+      <p style="color: #45474c;">Your OTP for password reset is:</p>
+      <div style="background: #f7f9fb; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+        <h1 style="color: #0058be; font-size: 48px; letter-spacing: 8px; margin: 0;">${otp}</h1>
       </div>
-    `
-  };
+      <p style="color: #45474c;">This OTP expires in 10 minutes.</p>
+      <p style="color: #75777d; font-size: 12px;">HireFlow — Your career journey starts here.</p>
+    </div>
+  `;
 
-  await transporter.sendMail(mailOptions);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
 };

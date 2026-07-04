@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.2",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "cloudinary": "^1.41.3",

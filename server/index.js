@@ -62,7 +62,7 @@ app.use('/api/dashboard', dashboardRoutes);
 // Test email route
 app.get('/test-email', async (req, res) => {
     try {
-        console.log('Attempting to send email...');
+        console.log('Testing Brevo API email...');
         await sendStatusEmail(
             process.env.EMAIL_USER,
             'Test User',
