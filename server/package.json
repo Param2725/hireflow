@@ -12,7 +12,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@getbrevo/brevo": "^6.0.2",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "cloudinary": "^1.41.3",
@@ -28,6 +27,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.10",
     "nodemon": "^3.1.14",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "sib-api-v3-sdk": "^8.5.0"
   }
 }

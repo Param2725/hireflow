@@ -1,10 +1,13 @@
-import * as Brevo from '@getbrevo/brevo';
+import SibApiV3Sdk from 'sib-api-v3-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+const apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 console.log('Brevo API configured ✅');
 
@@ -19,7 +22,7 @@ export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, ne
   const message = statusMessages[newStatus];
   if (!message) return;
 
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   sendSmtpEmail.subject = `Application Update — ${jobTitle} at ${company}`;
   sendSmtpEmail.to = [{ email: toEmail, name: seekerName }];
   sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: 'HireFlow' };
@@ -39,10 +42,11 @@ export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, ne
   `;
 
   await apiInstance.sendTransacEmail(sendSmtpEmail);
+  console.log(`Email sent to ${toEmail}`);
 };
 
 export const sendOtpEmail = async (toEmail, otp) => {
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   sendSmtpEmail.subject = 'HireFlow — Password Reset OTP';
   sendSmtpEmail.to = [{ email: toEmail }];
   sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: 'HireFlow' };
