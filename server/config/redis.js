@@ -1,10 +1,9 @@
 import Redis from 'ioredis';
 
 const redis = new Redis(process.env.REDIS_URL, {
-    tls: process.env.NODE_ENV === 'production' ? {} : undefined,
-    enableReadyCheck: false,   // ← fixes hanging
-    maxRetriesPerRequest: null,    // ← fixes hanging
-    lazyConnect: true     // ← don't block startup
+    tls: {},
+    enableReadyCheck: false,
+    maxRetriesPerRequest: null
 });
 
 redis.on('connect', () => console.log('Redis connected'));
