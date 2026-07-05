@@ -22,6 +22,73 @@ const formatDate = (dateStr) => {
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+const formatDescription = (text) => {
+    if (!text) return null;
+
+    const lines = text.split('\n');
+
+    return lines.map((line, index) => {
+        const trimmed = line.trim();
+
+        // Empty line → spacing
+        if (!trimmed) return <div key={index} className="mb-sm" />;
+
+        // Heading line (ends with :)
+        if (trimmed.endsWith(':') && trimmed.length < 50) {
+            return (
+                <h3 key={index} className="text-headline-sm text-primary mt-lg mb-sm font-semibold">
+                    {trimmed}
+                </h3>
+            );
+        }
+
+        // Bullet point (starts with - or • or *)
+        if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) {
+            return (
+                <div key={index} className="flex items-start gap-sm mb-xs">
+                    <span className="text-secondary mt-1 shrink-0">•</span>
+                    <span className="text-body-md text-on-surface-variant">
+                        {trimmed.replace(/^[-•*]\s*/, '')}
+                    </span>
+                </div>
+            );
+        }
+
+        // Numbered list (starts with 1. 2. etc)
+        if (/^\d+\./.test(trimmed)) {
+            const num = trimmed.match(/^(\d+)\./)[1];
+            const content = trimmed.replace(/^\d+\.\s*/, '');
+            return (
+                <div key={index} className="flex items-start gap-sm mb-xs">
+                    <span className="text-secondary font-semibold shrink-0 w-5">{num}.</span>
+                    <span className="text-body-md text-on-surface-variant">{content}</span>
+                </div>
+            );
+        }
+
+        // Bold text (wrapped in **)
+        if (trimmed.includes('**')) {
+            const parts = trimmed.split(/\*\*(.*?)\*\*/g);
+            return (
+                <p key={index} className="text-body-md text-on-surface-variant mb-sm">
+                    {parts.map((part, i) =>
+                        i % 2 === 1
+                            ? <strong key={i} className="text-primary font-semibold">{part}</strong>
+                            : part
+                    )}
+                </p>
+            );
+        }
+
+        // Regular paragraph
+        return (
+            <p key={index} className="text-body-md text-on-surface-variant mb-sm">
+                {trimmed}
+            </p>
+        );
+    });
+};
+
 export default function JobDetail() {
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -60,6 +127,16 @@ export default function JobDetail() {
             setHasApplied(applied);
         } catch (err) {
             console.log('check failed:', err.message);
+        }
+    };
+
+    const handleDeleteJob = async () => {
+        if (!window.confirm('Are you sure you want to delete this job? This cannot be undone.')) return;
+        try {
+            await API.delete(`/jobs/${job._id}`);
+            navigate('/jobs');
+        } catch (err) {
+            alert('Failed to delete job');
         }
     };
 
@@ -155,19 +232,13 @@ export default function JobDetail() {
                                                     <span className="text-on-surface-variant text-body-sm">Posted {formatDate(job.createdAt)}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-sm">
-                                                <button className="p-base rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors">
-                                                    <span className="material-symbols-outlined text-on-surface-variant">share</span>
-                                                </button>
-                                                <button className="p-base rounded-lg border border-outline-variant hover:bg-surface-container-low transition-colors">
-                                                    <span className="material-symbols-outlined text-on-surface-variant">bookmark</span>
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
 
                                     <article className="job-content">
-                                        <div style={{ whiteSpace: 'pre-line' }}>{job.description}</div>
+                                        <div className="description-content">
+                                            {formatDescription(job.description)}
+                                        </div>
                                         <div className="mt-lg">
                                             <h2 className="mb-md">Required Skills</h2>
                                             <div className="flex flex-wrap gap-xs">
@@ -221,14 +292,34 @@ export default function JobDetail() {
 
                                     {/* ── ACTION BUTTON ── */}
                                     {isJobPoster ? (
-                                        // Only the recruiter who posted sees View Applicants
-                                        <Link
-                                            to={`/recruiter/jobs/${job._id}/applicants`}
-                                            className="w-full bg-secondary text-on-secondary py-md rounded-lg font-bold text-body-md shadow-md hover:opacity-95 transition-all mb-md flex items-center justify-center gap-xs"
-                                        >
-                                            <span className="material-symbols-outlined text-[20px]">people</span>
-                                            View Applicants
-                                        </Link>
+                                        <div className="space-y-sm">
+                                            {/* View Applicants */}
+                                            <Link
+                                                to={`/recruiter/jobs/${job._id}/applicants`}
+                                                className="w-full bg-secondary text-on-secondary py-md rounded-lg font-bold text-body-md shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-xs"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">people</span>
+                                                View Applicants
+                                            </Link>
+
+                                            {/* Edit Job */}
+                                            <Link
+                                                to={`/jobs/${job._id}/edit`}
+                                                className="w-full border border-secondary text-secondary py-sm rounded-lg font-bold text-body-md flex items-center justify-center gap-xs hover:bg-secondary hover:text-on-secondary transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                Edit Job
+                                            </Link>
+
+                                            {/* Delete Job */}
+                                            <button
+                                                className="w-full border border-red-300 text-red-500 py-sm rounded-lg font-bold text-body-md flex items-center justify-center gap-xs hover:bg-red-500 hover:text-white transition-all"
+                                                onClick={handleDeleteJob}
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                Delete Job
+                                            </button>
+                                        </div>
                                     ) : hasApplied ? (
                                         // Seeker already applied
                                         <div className="w-full bg-tertiary-fixed text-on-tertiary-fixed py-md rounded-lg font-bold text-body-md flex items-center justify-center gap-xs mb-md cursor-default">
@@ -245,13 +336,6 @@ export default function JobDetail() {
                                             }}
                                         >
                                             Apply Now
-                                        </button>
-                                    )}
-
-                                    {/* Save for Later — not for job poster */}
-                                    {!isJobPoster && (
-                                        <button className="w-full bg-surface-container-lowest text-primary py-md rounded-lg font-bold text-body-md border border-outline-variant hover:bg-surface-container-low transition-colors">
-                                            Save for Later
                                         </button>
                                     )}
 

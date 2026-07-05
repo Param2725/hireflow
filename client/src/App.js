@@ -13,6 +13,7 @@ import ApplicantsList from './pages/ApplicantsList';
 import SeekerDashboard from './pages/SeekerDashboard';
 import RecruiterDashboard from './pages/RecruiterDashboard';
 import ForgotPassword from './pages/ForgotPassword';
+import EditJob from './pages/EditJob';
 
 // Role-based dashboard
 function Dashboard() {
@@ -38,6 +39,12 @@ export default function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/jobs/:id/edit" element={
+            <ProtectedRoute>
+              <EditJob />
             </ProtectedRoute>
           } />
 

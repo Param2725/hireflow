@@ -5,7 +5,7 @@ dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-console.log('Resend configured ✅');
+console.log('Resend configured');
 
 export const sendStatusEmail = async (toEmail, seekerName, jobTitle, company, newStatus) => {
   const statusMessages = {
