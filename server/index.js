@@ -62,7 +62,7 @@ app.use('/api/dashboard', dashboardRoutes);
 // Test email route
 app.get('/test-email', async (req, res) => {
     try {
-        console.log('Testing Brevo API email...');
+        console.log('Testing Resend email...');
         await sendStatusEmail(
             'parampatel2725@gmail.com',
             'Test User',
@@ -73,12 +73,8 @@ app.get('/test-email', async (req, res) => {
         console.log('Email sent successfully');
         res.json({ message: 'Email sent successfully' });
     } catch (error) {
-        console.log('Full error object:', JSON.stringify(error, null, 2));
-        res.json({
-            error: error.message,
-            status: error.status,
-            body: error.response?.body || error.response?.text
-        });
+        console.log('Email error:', error.message);
+        res.json({ error: error.message });
     }
 });
 
