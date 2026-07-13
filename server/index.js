@@ -51,9 +51,9 @@ const applyLimiter = rateLimit({
     message: { message: 'Too many applications, slow down' }
 });
 
-// app.use('/api/auth/login', authLimiter);
-// app.use('/api/auth/register', authLimiter);
-// app.use('/api/applications', applyLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/applications', applyLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
