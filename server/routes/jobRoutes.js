@@ -4,7 +4,8 @@ import {
     getAllJobs,
     getJobById,
     updateJob,
-    deleteJob
+    deleteJob,
+    closeJob
 } from '../controllers/jobController.js';
 import { protect, isRecruiter } from '../middleware/authMiddleware.js';
 
@@ -18,5 +19,6 @@ router.get('/:id', getJobById);
 router.post('/', protect, isRecruiter, createJob);
 router.patch('/:id', protect, isRecruiter, updateJob);
 router.delete('/:id', protect, isRecruiter, deleteJob);
+router.patch('/:id/close', protect, isRecruiter, closeJob);
 
 export default router;

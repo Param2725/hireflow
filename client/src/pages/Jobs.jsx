@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
-// Helper — badge color based on job type
 const typeBadgeClass = (type) => {
     switch (type) {
         case 'full-time': return 'bg-secondary-fixed text-on-secondary-fixed';
@@ -16,7 +15,6 @@ const typeBadgeClass = (type) => {
     }
 };
 
-// Helper — format salary
 const formatSalary = (min, max) => {
     const fmt = (n) => n >= 100000
         ? `₹${(n / 100000).toFixed(0)}L`
@@ -36,12 +34,9 @@ export default function Jobs() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    // Fetch jobs when filters change
     useEffect(() => {
         fetchJobs();
-    }, []); // ← only runs once on page load now
-
-    // Replace your current fetchJobs + handlers with this
+    }, []);
 
     const fetchJobs = async (options = {}) => {
         const {
@@ -60,8 +55,6 @@ export default function Jobs() {
             if (locationFilter) params.location = locationFilter;
             if (cursor) params.cursor = cursor;
 
-            console.log('Fetching with params:', params); // debug
-
             const res = await API.get('/jobs', { params });
 
             if (cursor) {
@@ -79,20 +72,14 @@ export default function Jobs() {
         }
     };
 
-    // When type dropdown changes — pass value directly
     const handleTypeChange = (e) => {
         const newType = e.target.value;
         setType(newType);
         fetchJobs({ typeFilter: newType });
     };
 
-    // When search or location button clicked — pass all current values
     const handleSearch = () => {
-        fetchJobs({
-            searchQuery: search,
-            typeFilter: type,
-            locationFilter: location
-        });
+        fetchJobs({ searchQuery: search, typeFilter: type, locationFilter: location });
     };
 
     const handleKeyDown = (e) => {
@@ -105,7 +92,6 @@ export default function Jobs() {
             {/* ── HEADER ── */}
             <header className="bg-surface-container-lowest sticky top-0 z-50 border-b border-outline-variant shadow-sm w-full">
                 <div className="flex justify-between items-center w-full px-md lg:px-lg max-w-[1280px] mx-auto h-16">
-
                     <div className="flex items-center gap-xl">
                         <Link to="/" className="text-headline-md font-bold text-primary">HireFlow</Link>
                         <nav className="hidden md:flex gap-md items-center h-full">
@@ -114,11 +100,12 @@ export default function Jobs() {
                             </Link>
                         </nav>
                     </div>
-
                     <div className="flex items-center gap-md">
                         {user ? (
                             <>
-                                <Link to="/dashboard" className="text-on-surface-variant hover:text-secondary text-body-md">Dashboard</Link>
+                                <Link to="/dashboard" className="text-on-surface-variant hover:text-secondary text-body-md">
+                                    Dashboard
+                                </Link>
                                 {user.role === 'recruiter' && (
                                     <Link
                                         to="/post-job"
@@ -130,7 +117,9 @@ export default function Jobs() {
                             </>
                         ) : (
                             <>
-                                <Link to="/login" className="text-on-surface-variant hover:text-secondary text-body-md">Sign In</Link>
+                                <Link to="/login" className="text-on-surface-variant hover:text-secondary text-body-md">
+                                    Sign In
+                                </Link>
                                 <Link
                                     to="/register"
                                     className="bg-secondary text-on-secondary px-md py-xs rounded-lg text-label-md hover:opacity-90 transition-all"
@@ -140,7 +129,6 @@ export default function Jobs() {
                             </>
                         )}
                     </div>
-
                 </div>
             </header>
 
@@ -178,7 +166,6 @@ export default function Jobs() {
                 <div className="sticky top-16 z-40 bg-surface backdrop-blur-md border-b border-outline-variant">
                     <div className="max-w-[1280px] mx-auto px-md lg:px-lg py-md flex flex-wrap items-center gap-md">
 
-                        {/* Job Type */}
                         <div className="flex flex-col gap-xs min-w-[200px]">
                             <label className="text-label-sm text-on-surface-variant">Job Type</label>
                             <div className="relative">
@@ -200,7 +187,6 @@ export default function Jobs() {
                             </div>
                         </div>
 
-                        {/* Location */}
                         <div className="flex flex-col gap-xs min-w-[200px]">
                             <label className="text-label-sm text-on-surface-variant">Location</label>
                             <div className="relative">
@@ -241,7 +227,6 @@ export default function Jobs() {
                         </span>
                     </div>
 
-                    {/* Loading state */}
                     {loading && (
                         <div className="flex justify-center items-center py-xl">
                             <span className="material-symbols-outlined animate-spin text-secondary text-[40px]">
@@ -250,58 +235,58 @@ export default function Jobs() {
                         </div>
                     )}
 
-                    {/* Empty state */}
                     {!loading && jobs.length === 0 && (
                         <div className="text-center py-xl">
-                            <span className="material-symbols-outlined text-[64px] text-outline-variant">
-                                work_off
-                            </span>
-                            <p className="text-headline-sm text-on-surface-variant mt-md">
-                                No jobs found
-                            </p>
-                            <p className="text-body-sm text-on-surface-variant mt-xs">
-                                Try different search terms or filters
-                            </p>
+                            <span className="material-symbols-outlined text-[64px] text-outline-variant">work_off</span>
+                            <p className="text-headline-sm text-on-surface-variant mt-md">No jobs found</p>
+                            <p className="text-body-sm text-on-surface-variant mt-xs">Try different search terms or filters</p>
                         </div>
                     )}
 
-                    {/* Job cards grid */}
                     {!loading && jobs.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
                             {jobs.map((job) => (
                                 <div
                                     key={job._id}
-                                    className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm job-card-hover group"
+                                    className={`bg-surface-container-lowest border rounded-xl p-md shadow-sm job-card-hover group ${job.status === 'closed'
+                                            ? 'border-red-200 opacity-75'
+                                            : 'border-outline-variant'
+                                        }`}
                                 >
-                                    {/* Card header */}
+                                    {/* Card header — type badge + closed badge */}
                                     <div className="flex justify-between items-start mb-sm">
                                         <div className="w-12 h-12 rounded-lg bg-primary-fixed flex items-center justify-center text-primary font-bold text-headline-sm">
                                             {job.company.charAt(0).toUpperCase()}
                                         </div>
-                                        <span className={`px-xs py-[2px] rounded text-label-sm capitalize ${typeBadgeClass(job.type)}`}>
-                                            {job.type}
-                                        </span>
+
+                                        {/* Badges on right */}
+                                        <div className="flex items-center gap-xs">
+                                            <span className={`px-xs py-[2px] rounded text-label-sm capitalize ${typeBadgeClass(job.type)}`}>
+                                                {job.type}
+                                            </span>
+                                            {/* ✅ Closed badge — correctly placed next to type badge */}
+                                            {job.status === 'closed' && (
+                                                <span className="bg-red-100 text-red-700 px-xs py-[2px] rounded text-label-sm">
+                                                    Closed
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    {/* Job info */}
                                     <h3 className="text-headline-sm text-primary group-hover:text-secondary transition-colors">
                                         {job.title}
                                     </h3>
-                                    <p className="text-body-sm font-medium text-on-surface-variant mt-xs">
-                                        {job.company}
-                                    </p>
+                                    <p className="text-body-sm font-medium text-on-surface-variant mt-xs">{job.company}</p>
                                     <div className="flex items-center gap-xs mt-xs text-on-surface-variant text-body-sm">
                                         <span className="material-symbols-outlined text-[16px]">location_on</span>
                                         {job.location}
                                     </div>
 
-                                    {/* Salary */}
                                     <div className="mt-md flex items-center text-primary text-label-md">
                                         <span className="material-symbols-outlined text-[18px] mr-1">payments</span>
                                         {formatSalary(job.salaryMin, job.salaryMax)}
                                     </div>
 
-                                    {/* Skills */}
                                     <div className="mt-sm flex flex-wrap gap-xs">
                                         {job.skills.slice(0, 3).map((skill, index) => (
                                             <span
@@ -313,7 +298,6 @@ export default function Jobs() {
                                         ))}
                                     </div>
 
-                                    {/* View Details button */}
                                     <button
                                         onClick={() => navigate(`/jobs/${job._id}`)}
                                         className="w-full mt-md border border-outline-variant text-primary py-xs rounded-lg text-label-md hover:bg-primary hover:text-on-primary transition-all"
@@ -326,19 +310,16 @@ export default function Jobs() {
                         </div>
                     )}
 
-                    {/* Load More */}
                     {nextCursor && !loading && (
                         <div className="mt-xl flex justify-center">
                             <button
-                                onClick={() => fetchJobs(nextCursor)}
+                                onClick={() => fetchJobs({ cursor: nextCursor })}
                                 disabled={loadingMore}
                                 className="flex items-center gap-sm px-xl py-sm border border-outline-variant rounded-lg text-label-md text-primary hover:bg-surface-container transition-colors disabled:opacity-60"
                             >
                                 {loadingMore ? (
                                     <>
-                                        <span className="material-symbols-outlined animate-spin text-[18px]">
-                                            progress_activity
-                                        </span>
+                                        <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
                                         Loading...
                                     </>
                                 ) : (
@@ -359,9 +340,7 @@ export default function Jobs() {
                 <div className="flex flex-col md:flex-row justify-between items-center w-full px-md lg:px-lg py-lg max-w-[1280px] mx-auto">
                     <div className="flex flex-col items-center md:items-start mb-md md:mb-0">
                         <span className="text-headline-sm font-bold text-on-primary mb-xs">HireFlow</span>
-                        <p className="text-on-primary text-body-sm opacity-80">
-                            Empowering careers through precision networking.
-                        </p>
+                        <p className="text-on-primary text-body-sm opacity-80">Empowering careers through precision networking.</p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-md">
                         <a className="text-on-primary text-body-sm opacity-80 hover:opacity-100 transition-opacity" href="/">About Us</a>

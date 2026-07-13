@@ -42,6 +42,15 @@ const jobSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: User,
         required: true
+    },
+    status: {
+        type: String,
+        enum: ['active', 'closed'],
+        default: 'active'
+    },
+    closedAt: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
 

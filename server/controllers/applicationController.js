@@ -47,6 +47,12 @@ const applyJob = async (req, res) => {
             return res.status(404).json({ message: 'Job not found' });
         }
 
+        if (job.status == 'closed') {
+            return res.status(400).json({
+                message: 'This job is no Longer accepting applications'
+            });
+        }
+
         if (!req.file) {
             return res.status(400).json({ message: 'Resume PDF is required' });
         }
@@ -125,15 +131,18 @@ const getJobApplicants = async (req, res) => {
     }
 };
 
-// ── UPDATE APPLICATION STATUS (recruiter) ────
 const updateStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, interviewDate } = req.body;
 
         const validStatuses = ['Applied', 'Reviewed', 'Interview', 'Offered', 'Rejected'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        if (status === 'Interview' && !interviewDate) {
+            return res.status(400).json({ message: 'Interview date is required when scheduling an interview' });
         }
 
         const application = await Application.findById(id)
@@ -144,23 +153,31 @@ const updateStatus = async (req, res) => {
             return res.status(404).json({ message: 'Application not found' });
         }
 
-        await Application.findByIdAndUpdate(id, { status });
+        const updateData = { status };
+        if (interviewDate) updateData.interviewDate = new Date(interviewDate);
 
-        if (status !== 'Applied') {
-            await emailQueue.add({
-                toEmail: application.seekerId.email,
-                seekerName: application.seekerId.name,
-                jobTitle: application.jobId.title,    // ← was application.seekerId.title (wrong)
-                company: application.jobId.company,  // ← was application.seekerId.company (wrong)
-                status
-            });
-            console.log('Email job added to queue');
-        }
+        await Application.findByIdAndUpdate(id, updateData);
 
         res.status(200).json({
             message: 'Status updated successfully',
-            application: { ...application.toObject(), status }
+            application: { ...application.toObject(), status, interviewDate }
         });
+
+        if (status !== 'Applied') {
+            try {
+                await emailQueue.add({
+                    toEmail: application.seekerId.email,
+                    seekerName: application.seekerId.name,
+                    jobTitle: application.jobId.title,
+                    company: application.jobId.company,
+                    status,
+                    interviewDate: interviewDate || null
+                });
+                console.log('Email job added to queue');
+            } catch (emailErr) {
+                console.log('Email queue failed (non-critical):', emailErr.message);
+            }
+        }
 
     } catch (error) {
         res.status(500).json({ message: error.message });

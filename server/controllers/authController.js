@@ -35,23 +35,30 @@ const resetPassword = async (req, res) => {
 
         const result = verifyOtp(email, otp);
         if (!result.valid) {
-            return res.status(400).json({
-                message: result.message
-            });
+            return res.status(400).json({ message: result.message });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isSamePassword = await bcrypt.compare(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).json({ message: 'New password cannot be same as old password' });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 12);
         await User.findOneAndUpdate({ email }, { password: hashedPassword });
 
-        res.status(200).json({
-            message: 'Password Reset Successfully'
-        });
+        res.status(200).json({ message: 'Password reset successfully' });
+
     } catch (error) {
-        res.status(500).json({
-            message: error.message
-        })
+        console.log('Reset error:', error.message);
+        res.status(500).json({ message: error.message });
     }
-}
+};
 
 const generateTokens = (userId) => {
     const accessToken = jwt.sign(

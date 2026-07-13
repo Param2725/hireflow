@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -23,8 +23,8 @@ const statusSelectClass = (status) => {
 };
 
 const matchScoreClass = (score) => {
-    if (score >= 30) return 'bg-green-100 text-green-700';   // was 70
-    if (score >= 10) return 'bg-yellow-100 text-yellow-700'; // was 40
+    if (score >= 30) return 'bg-green-100 text-green-700';
+    if (score >= 10) return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-700';
 };
 
@@ -35,6 +35,9 @@ export default function ApplicantsList() {
     const [error, setError] = useState('');
     const [expandedCL, setExpandedCL] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(null);
+    const [interviewDate, setInterviewDate] = useState('');
+    const [minDateTime, setMinDateTime] = useState('');
 
     const { jobId } = useParams();
     const { user } = useAuth();
@@ -61,17 +64,63 @@ export default function ApplicantsList() {
         }
     };
 
+    // When Interview selected → show date picker
     const handleStatusChange = async (applicationId, newStatus) => {
+        if (newStatus === 'Interview') {
+            const now = new Date();
+            const offset = now.getTimezoneOffset();
+            const local = new Date(now.getTime() - offset * 60 * 1000 + 60 * 1000); // +1 min buffer
+            setMinDateTime(local.toISOString().slice(0, 16));
+            setShowDatePicker(applicationId);
+            setInterviewDate('');
+            return;
+        }
+        await submitStatusChange(applicationId, newStatus, null);
+    };
+
+    // Called when date picker confirms
+    const handleInterviewSubmit = async (applicationId) => {
+        if (!interviewDate) {
+            alert('Please select interview date and time');
+            return;
+        }
+
+        if (new Date(interviewDate) <= new Date()) {
+            alert('Interview date must be in the future');
+            return;
+        }
+
+        const dateToSubmit = interviewDate;
+        setShowDatePicker(null);
+        setInterviewDate('');
+        await submitStatusChange(applicationId, 'Interview', dateToSubmit);
+    };
+
+    const submitStatusChange = async (applicationId, newStatus, date) => {
         setUpdatingId(applicationId);
         try {
-            await API.patch(`/applications/${applicationId}/status`, { status: newStatus });
+            await API.patch(`/applications/${applicationId}/status`, {
+                status: newStatus,
+                interviewDate: date
+            });
+
+
             setApplications(prev =>
-                prev.map(app =>
-                    app._id === applicationId ? { ...app, status: newStatus } : app
-                )
+                prev.map(app => {
+                    if (app._id === applicationId) {
+                        return {
+                            ...app,
+                            status: newStatus,
+                            interviewDate: date
+                        };
+                    }
+                    return app;
+                })
             );
+            await fetchApplicants();
+
         } catch (err) {
-            alert('Failed to update status');
+            alert(err.response?.data?.message || 'Failed to update status');
         } finally {
             setUpdatingId(null);
         }
@@ -81,12 +130,9 @@ export default function ApplicantsList() {
         setExpandedCL(expandedCL === id ? null : id);
     };
 
-    // Sort applications by match score (highest first)
-    const sortedApplications = useMemo(() => {
-        return [...applications].sort(
-            (a, b) => (b.matchScore || 0) - (a.matchScore || 0)
-        );
-    }, [applications]);
+    const sortedApplications = [...applications].sort(
+        (a, b) => (b.matchScore || 0) - (a.matchScore || 0)
+    );
 
     const stats = {
         total: applications.length,
@@ -222,10 +268,8 @@ export default function ApplicantsList() {
 
                                         <tbody className="divide-y divide-outline-variant">
                                             {sortedApplications.map((app) => (
-
                                                 <React.Fragment key={app._id}>
 
-                                                    {/* Applicant row */}
                                                     <tr className="applicant-row group hover:bg-surface-container-lowest transition-colors duration-150">
 
                                                         <td className="px-md py-md">
@@ -240,7 +284,6 @@ export default function ApplicantsList() {
                                                             </div>
                                                         </td>
 
-                                                        {/* ── MATCH SCORE COLUMN ── */}
                                                         <td className="px-md py-md">
                                                             {app.matchScore > 0 ? (
                                                                 <div className={`inline-flex items-center gap-xs px-sm py-xs rounded-full text-label-sm font-semibold ${matchScoreClass(app.matchScore)}`}>
@@ -257,22 +300,37 @@ export default function ApplicantsList() {
                                                         </td>
 
                                                         <td className="px-md py-md">
-                                                            <div className="relative inline-block w-36">
-                                                                <select
-                                                                    className={`w-full border-none rounded-lg text-label-md py-xs pl-sm pr-base cursor-pointer focus:ring-2 focus:ring-secondary/20 appearance-none transition-all ${statusSelectClass(app.status)} ${updatingId === app._id ? 'opacity-50' : ''}`}
-                                                                    value={app.status}
-                                                                    disabled={updatingId === app._id}
-                                                                    onChange={(e) => handleStatusChange(app._id, e.target.value)}
-                                                                >
-                                                                    <option value="Applied">Applied</option>
-                                                                    <option value="Reviewed">Reviewed</option>
-                                                                    <option value="Interview">Interview</option>
-                                                                    <option value="Offered">Offered</option>
-                                                                    <option value="Rejected">Rejected</option>
-                                                                </select>
-                                                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[18px]">
-                                                                    expand_more
-                                                                </span>
+                                                            <div>
+                                                                <div className="relative inline-block w-36">
+                                                                    <select
+                                                                        className={`w-full border-none rounded-lg text-label-md py-xs pl-sm pr-base cursor-pointer focus:ring-2 focus:ring-secondary/20 appearance-none transition-all ${statusSelectClass(app.status)} ${updatingId === app._id ? 'opacity-50' : ''}`}
+                                                                        value={app.status}
+                                                                        disabled={updatingId === app._id}
+                                                                        onChange={(e) => handleStatusChange(app._id, e.target.value)}
+                                                                    >
+                                                                        <option value="Applied">Applied</option>
+                                                                        <option value="Reviewed">Reviewed</option>
+                                                                        <option value="Interview">Interview</option>
+                                                                        <option value="Offered">Offered</option>
+                                                                        <option value="Rejected">Rejected</option>
+                                                                    </select>
+                                                                    <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[18px]">
+                                                                        expand_more
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* ── Show interview date if scheduled ── */}
+                                                                {app.status === 'Interview' && app.interviewDate && (
+                                                                    <div className="flex items-center gap-xs mt-xs text-label-sm text-secondary">
+                                                                        <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                                                        {new Date(app.interviewDate).toLocaleString('en-IN', {
+                                                                            day: 'numeric',
+                                                                            month: 'short',
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </td>
 
@@ -294,15 +352,11 @@ export default function ApplicantsList() {
                                                                     className="resume-btn flex items-center gap-xs px-sm py-xs bg-surface-container-high rounded-lg text-primary text-label-sm hover:bg-outline-variant transition-all"
                                                                     onClick={() => {
                                                                         let downloadUrl = app.resumeUrl;
-
                                                                         if (downloadUrl.includes('/image/upload/')) {
-                                                                            downloadUrl = downloadUrl
-                                                                                .replace('/image/upload/', '/image/upload/fl_attachment/');
+                                                                            downloadUrl = downloadUrl.replace('/image/upload/', '/image/upload/fl_attachment/');
                                                                         } else {
-                                                                            downloadUrl = downloadUrl
-                                                                                .replace('/raw/upload/', '/raw/upload/fl_attachment/');
+                                                                            downloadUrl = downloadUrl.replace('/raw/upload/', '/raw/upload/fl_attachment/');
                                                                         }
-
                                                                         window.open(downloadUrl, '_blank');
                                                                     }}
                                                                 >
@@ -368,6 +422,66 @@ export default function ApplicantsList() {
                     </div>
                 </div>
             </footer>
+
+            {/* ── INTERVIEW DATE PICKER MODAL ── */}
+            {showDatePicker && (
+                <div className="fixed inset-0 z-50 glass-effect flex items-center justify-center p-gutter">
+                    <div className="bg-surface-container-lowest w-full max-w-md rounded-xl shadow-2xl border border-outline-variant p-md">
+
+                        <h2 className="text-headline-md text-primary mb-xs">Schedule Interview</h2>
+                        <p className="text-body-sm text-on-surface-variant mb-md">
+                            Select date and time. The candidate will receive an email with these details.
+                        </p>
+
+                        <div className="space-y-md">
+                            <div className="flex flex-col gap-xs">
+                                <label className="text-label-md text-on-surface">Interview Date & Time</label>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full px-md py-3 rounded-lg border border-outline-variant bg-surface text-on-surface text-body-md form-input-focus transition-all"
+                                    value={interviewDate}
+                                    min={minDateTime}
+                                    onChange={(e) => setInterviewDate(e.target.value)}
+                                />
+                            </div>
+
+                            {interviewDate && (
+                                <div className="bg-secondary-fixed rounded-lg p-sm text-on-secondary-fixed text-body-sm">
+                                    <p className="font-semibold mb-xs">Interview scheduled for:</p>
+                                    <p>{new Date(interviewDate).toLocaleString('en-IN', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}</p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-sm pt-sm">
+                                <button
+                                    onClick={() => {
+                                        setShowDatePicker(null);
+                                        setInterviewDate('');
+                                    }}
+                                    className="flex-1 py-sm border border-outline-variant text-on-surface rounded-lg text-label-md hover:bg-surface-container transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleInterviewSubmit(showDatePicker)}
+                                    disabled={!interviewDate || !!updatingId}
+                                    className="flex-1 py-sm bg-secondary text-on-secondary rounded-lg text-label-md hover:opacity-90 transition-all disabled:opacity-60"
+                                >
+                                    {updatingId ? 'Scheduling...' : 'Schedule & Notify'}
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
         </div>
     );

@@ -1,5 +1,6 @@
 import Job from "../models/Job.js";
 import redis from '../config/redis.js';
+import Application from "../models/Application.js";
 
 const createJob = async (req, res) => {
     try {
@@ -91,17 +92,17 @@ const getJobById = async (req, res) => {
             .populate('postedBy', 'name email');
 
         if (!job) {
-            res.status(404).json({
+            return res.status(404).json({
                 message: 'Job not found'
             })
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             job
         })
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message
         })
     }
@@ -157,7 +158,7 @@ const deleteJob = async (req, res) => {
                 message: 'You are not authorized to delete this'
             })
         }
-
+        await Application.deleteMany({ jobId: req.params.id });
         await Job.findByIdAndDelete(req.params.id);
 
         const keys = await redis.keys('jobs:*');
@@ -176,11 +177,74 @@ const deleteJob = async (req, res) => {
     }
 };
 
+const closeJob = async (req, res) => {
+    try {
+        const job = await Job.findById(req.params.id);
+
+        if (!job) {
+            return res.status(404).json({
+                message: 'Job not found'
+            })
+        }
+
+        if (job.postedBy.toString() !== req.user._id.toString()) {
+            return res
+                .status(403)
+                .json({
+                    message: 'Not Authorized'
+                })
+        }
+
+        await Job.findByIdAndUpdate(
+            req.params.id,
+            {
+                status: 'closed',
+                closedAt: new Date()
+            }
+        );
+
+        res.status(200).json({
+            message: 'Job Closed Successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        })
+    }
+};
+
+const deleteExpiredJobs = async () => {
+    try {
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+        const expiredJobs = await Job.find({
+            status: 'closed',
+            closedAt: { $lt: threeDaysAgo }
+        });
+
+        console.log(`Found ${expiredJobs.length} expired jobs`);
+
+        const expiredJobIds = expiredJobs.map(j => j._id);
+
+        if (expiredJobIds.length > 0) {
+            await Application.deleteMany({ jobId: { $in: expiredJobIds } });
+            await Job.deleteMany({ _id: { $in: expiredJobIds } });
+            console.log(`Auto-deleted ${expiredJobIds.length} expired jobs and their applications`);
+        } else {
+            console.log('No expired jobs to delete');
+        }
+
+    } catch (error) {
+        console.log('Auto-delete error:', error.message);
+    }
+};
 
 export {
     createJob,
     getAllJobs,
     getJobById,
     updateJob,
-    deleteJob
+    deleteJob,
+    closeJob,
+    deleteExpiredJobs
 };

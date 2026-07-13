@@ -9,6 +9,8 @@ import applicationRoutes from './routes/applicationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import rateLimit from 'express-rate-limit';
 import { sendStatusEmail } from './config/mailer.js';
+import cron from 'node-cron';
+import { deleteExpiredJobs } from './controllers/jobController.js';
 
 dotenv.config();
 connectDB();
@@ -49,9 +51,9 @@ const applyLimiter = rateLimit({
     message: { message: 'Too many applications, slow down' }
 });
 
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/applications', applyLimiter);
+// app.use('/api/auth/login', authLimiter);
+// app.use('/api/auth/register', authLimiter);
+// app.use('/api/applications', applyLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -76,6 +78,18 @@ app.get('/test-email', async (req, res) => {
         console.log('Email error:', error.message);
         res.json({ error: error.message });
     }
+});
+
+// runs everyday at midnight to delete jobs
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running auto-delete expired jobs...');
+    await deleteExpiredJobs();
+});
+
+//temp route
+app.get('/test-delete-jobs', async (req, res) => {
+    await deleteExpiredJobs();
+    res.json({ message: 'Delete ran — check MongoDB' });
 });
 
 app.get('/', (req, res) => {

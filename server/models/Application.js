@@ -31,6 +31,10 @@ const applicationSchema = new Schema({
     matchScore: {
         type: Number,
         default: 0
+    },
+    interviewDate: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
 

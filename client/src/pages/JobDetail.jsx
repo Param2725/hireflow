@@ -24,16 +24,10 @@ const formatDate = (dateStr) => {
 
 const formatDescription = (text) => {
     if (!text) return null;
-
     const lines = text.split('\n');
-
     return lines.map((line, index) => {
         const trimmed = line.trim();
-
-        // Empty line → spacing
         if (!trimmed) return <div key={index} className="mb-sm" />;
-
-        // Heading line (ends with :)
         if (trimmed.endsWith(':') && trimmed.length < 50) {
             return (
                 <h3 key={index} className="text-headline-sm text-primary mt-lg mb-sm font-semibold">
@@ -41,8 +35,6 @@ const formatDescription = (text) => {
                 </h3>
             );
         }
-
-        // Bullet point (starts with - or • or *)
         if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) {
             return (
                 <div key={index} className="flex items-start gap-sm mb-xs">
@@ -53,8 +45,6 @@ const formatDescription = (text) => {
                 </div>
             );
         }
-
-        // Numbered list (starts with 1. 2. etc)
         if (/^\d+\./.test(trimmed)) {
             const num = trimmed.match(/^(\d+)\./)[1];
             const content = trimmed.replace(/^\d+\.\s*/, '');
@@ -65,8 +55,6 @@ const formatDescription = (text) => {
                 </div>
             );
         }
-
-        // Bold text (wrapped in **)
         if (trimmed.includes('**')) {
             const parts = trimmed.split(/\*\*(.*?)\*\*/g);
             return (
@@ -79,8 +67,6 @@ const formatDescription = (text) => {
                 </p>
             );
         }
-
-        // Regular paragraph
         return (
             <p key={index} className="text-body-md text-on-surface-variant mb-sm">
                 {trimmed}
@@ -140,7 +126,16 @@ export default function JobDetail() {
         }
     };
 
-    // Check if this recruiter posted this job
+    const handleCloseJob = async () => {
+        if (!window.confirm('Close this job? Candidates will no longer be able to apply.')) return;
+        try {
+            await API.patch(`/jobs/${job._id}/close`);
+            setJob(prev => ({ ...prev, status: 'closed' }));
+        } catch (err) {
+            alert('Failed to close job');
+        }
+    };
+
     const isJobPoster = user?.role === 'recruiter' &&
         job?.postedBy &&
         String(job.postedBy._id) === String(user.id);
@@ -222,10 +217,19 @@ export default function JobDetail() {
                             {/* Left column */}
                             <div className="lg:col-span-8">
                                 <div className="bg-surface-container-lowest rounded-xl p-md lg:p-lg border border-outline-variant shadow-sm">
+
                                     <div className="mb-lg border-b border-surface-container pb-lg">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-md">
                                             <div>
-                                                <h1 className="text-headline-xl text-primary mb-xs">{job.title}</h1>
+                                                <div className="flex items-center gap-sm mb-xs">
+                                                    <h1 className="text-headline-xl text-primary">{job.title}</h1>
+                                                    {/* Closed badge on title */}
+                                                    {job.status === 'closed' && (
+                                                        <span className="bg-red-100 text-red-700 px-sm py-xs rounded-full text-label-sm font-semibold">
+                                                            Closed
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-sm">
                                                     <span className="text-secondary font-semibold text-headline-sm">{job.company}</span>
                                                     <span className="text-on-surface-variant">•</span>
@@ -290,9 +294,10 @@ export default function JobDetail() {
                                         </div>
                                     </div>
 
-                                    {/* ── ACTION BUTTON ── */}
+                                    {/* ── ACTION BUTTONS ── */}
                                     {isJobPoster ? (
                                         <div className="space-y-sm">
+
                                             {/* View Applicants */}
                                             <Link
                                                 to={`/recruiter/jobs/${job._id}/applicants`}
@@ -311,6 +316,22 @@ export default function JobDetail() {
                                                 Edit Job
                                             </Link>
 
+                                            {/* Close Applications */}
+                                            {job.status !== 'closed' ? (
+                                                <button
+                                                    className="w-full border border-orange-300 text-orange-500 py-sm rounded-lg font-bold text-body-md flex items-center justify-center gap-xs hover:bg-orange-500 hover:text-white transition-all"
+                                                    onClick={handleCloseJob}
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">block</span>
+                                                    Close Applications
+                                                </button>
+                                            ) : (
+                                                <div className="w-full bg-surface-container text-on-surface-variant py-sm rounded-lg text-label-md flex items-center justify-center gap-xs cursor-default">
+                                                    <span className="material-symbols-outlined text-[18px]">block</span>
+                                                    Applications Closed
+                                                </div>
+                                            )}
+
                                             {/* Delete Job */}
                                             <button
                                                 className="w-full border border-red-300 text-red-500 py-sm rounded-lg font-bold text-body-md flex items-center justify-center gap-xs hover:bg-red-500 hover:text-white transition-all"
@@ -319,13 +340,23 @@ export default function JobDetail() {
                                                 <span className="material-symbols-outlined text-[18px]">delete</span>
                                                 Delete Job
                                             </button>
+
                                         </div>
+
+                                    ) : job.status === 'closed' ? (
+                                        // Job is closed — show closed message to seeker
+                                        <div className="w-full bg-surface-container text-on-surface-variant py-md rounded-lg text-body-md flex items-center justify-center gap-xs mb-md cursor-default">
+                                            <span className="material-symbols-outlined text-[20px]">block</span>
+                                            Applications Closed
+                                        </div>
+
                                     ) : hasApplied ? (
                                         // Seeker already applied
                                         <div className="w-full bg-tertiary-fixed text-on-tertiary-fixed py-md rounded-lg font-bold text-body-md flex items-center justify-center gap-xs mb-md cursor-default">
                                             <span className="material-symbols-outlined text-[20px]">check_circle</span>
                                             Applied
                                         </div>
+
                                     ) : (
                                         // Seeker can apply
                                         <button
